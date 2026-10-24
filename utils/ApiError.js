@@ -15,4 +15,8 @@ export class ApiError extends Error {
         return new ApiError(409, message)
     }
 
+    static unAuthorised(message = "authentication required") {
+        return new ApiError(401, message)
+    }
+
 }

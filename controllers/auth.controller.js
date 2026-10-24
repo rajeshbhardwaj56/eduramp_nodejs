@@ -35,3 +35,38 @@ export async function register(req, res) {
     throw ApiError.conflict(error.message)
   }
 }
+
+
+export async function login(req, res) {
+  try {
+    const { email, password } = req.validated.body;
+
+    const user = await prisma.user.findUnique({ where: { email }, omit: { password: false } });
+
+    if(!user) {
+        throw ApiError.unAuthorised("invalid email")
+    }
+
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+
+    if(!passwordMatch) {
+        throw ApiError.unAuthorised("invalid password")
+    }
+
+    const { password: _hash, ...safeUser } = user;
+    
+
+    res.json({
+      success: true,
+      message: "Registered Successfully",
+      data: { user: safeUser, accessToken: accessToken(user) },
+    });
+  } catch (error) {
+    throw ApiError.conflict(error.message)
+  }
+}
+
+
+
+
