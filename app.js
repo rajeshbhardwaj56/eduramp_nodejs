@@ -3,6 +3,7 @@ import helmet from "helmet";
 import express from "express";
 import { env } from "./config/env.js";
 import morgan from "morgan";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -17,5 +18,7 @@ if (env.NODE_ENV !== "staging") {
 app.get("/api/health", (req, res) => {
   res.json({ success: true, status: "ok", time: new Date().toISOString() });
 });
+
+app.use("/api/auth", authRoutes)
 
 export default app;
