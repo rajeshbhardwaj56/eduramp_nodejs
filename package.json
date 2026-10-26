@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "engines": {
-    "node": ">=222.18"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "node --watch server.js",
