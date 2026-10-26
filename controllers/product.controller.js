@@ -1,31 +1,106 @@
 import { prisma } from "../lib/prisma.js";
+import { ApiError } from "../utils/ApiError.js";
 
 const ownerSelect = { owner: { select: { id: true, name: true } } };
 
-export async function listProducts(req, res) {}
+// only the owner of a product (or an admin) can change it
+async function findOwnedProduct(id, user) {
+  const product = await prisma.product.findUnique({ where: { id } });
 
-export async function getProduct(req, res) {}
-
-export async function createProduct(req, res) {
-  try {
-    const product = await prisma.product.create({
-      data: {
-        ...req.validated.body,
-        ownerId: req.user.id,
-      },
-      include: ownerSelect,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Product created",
-      data: product,
-    });
-  } catch (error) {
-    throw ApiError.conflict(error.message)
+  if (!product) {
+    throw ApiError.notFound("Product not found");
   }
+
+  if (product.ownerId !== user.id && user.role !== "ADMIN") {
+    throw ApiError.forbidden("You can only modify your own products");
+  }
+
+  return product;
 }
 
-export async function updateProduct(req, res) {}
+export async function listProducts(req, res) {
+  const { page, limit, search, minPrice, maxPrice, sortBy, order } = req.validated.query;
 
-export async function deleteProduct(req, res) {}
+  const where = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+    if (minPrice !== undefined) where.price.gte = minPrice;
+    if (maxPrice !== undefined) where.price.lte = maxPrice;
+  }
+
+  const [products, total] = await prisma.$transaction([
+    prisma.product.findMany({
+      where,
+      include: ownerSelect,
+      orderBy: { [sortBy]: order },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  res.json({
+    success: true,
+    data: products,
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
+}
+
+export async function getProduct(req, res) {
+  const product = await prisma.product.findUnique({
+    where: { id: req.validated.params.id },
+    include: ownerSelect,
+  });
+
+  if (!product) {
+    throw ApiError.notFound("Product not found");
+  }
+
+  res.json({ success: true, data: product });
+}
+
+export async function createProduct(req, res) {
+  const product = await prisma.product.create({
+    data: {
+      ...req.validated.body,
+      ownerId: req.user.id,
+    },
+    include: ownerSelect,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Product created",
+    data: product,
+  });
+}
+
+export async function updateProduct(req, res) {
+  const { id } = req.validated.params;
+  await findOwnedProduct(id, req.user);
+
+  const product = await prisma.product.update({
+    where: { id },
+    data: req.validated.body,
+    include: ownerSelect,
+  });
+
+  res.json({ success: true, message: "Product updated", data: product });
+}
+
+export async function deleteProduct(req, res) {
+  const { id } = req.validated.params;
+  await findOwnedProduct(id, req.user);
+
+  await prisma.product.delete({ where: { id } });
+
+  res.json({ success: true, message: "Product deleted" });
+}
