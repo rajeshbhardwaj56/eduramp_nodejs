@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../utils/ApiError.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 

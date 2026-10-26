@@ -14,7 +14,7 @@ export const PoruductIdSchema = z.object({
 });
 
 export const createProductSchema = z.object({
-  body: z.object({ productFields }),
+  body: productFields,
 });
 
 export const updatedProductSchema = z.object({
