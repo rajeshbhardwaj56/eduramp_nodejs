@@ -18,6 +18,13 @@ enum Role {
   ADMIN
 }
 
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPED
+  CANCELED
+}
+
 model User {
   id        Int       @id @default(autoincrement())
   name      String
@@ -25,6 +32,8 @@ model User {
   password  String
   role      Role      @default(USER)
   products  Product[]
+  orders    Order[]
+  reviews   Review[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -40,9 +49,66 @@ model Product {
   stock       Int      @default(0)
   ownerId     Int
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  reviews     Review[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([ownerId])
   @@map("products")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  products    Product[] // one category -> many product
+
+  @@map("categories")
+}
+
+model Order {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      OrderStatus   @default(PENDING)
+  total       Decimal       @db.Decimal(10, 2)
+  items       OrderItem[]
+  createdAt   DateTime @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          Int           @id @default(autoincrement())
+  orderId     Int
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity    Int
+  unitPrice   Decimal       @db.Decimal(10, 2)
+
+  
+  @@index([orderId])  
+  @@index([productId])  
+  @@map("order_items")
+}
+
+
+model Review {
+  id          Int           @id @default(autoincrement())
+  rating      Int
+  comment     String?
+  userId      Int 
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@map("reviews")
 }
