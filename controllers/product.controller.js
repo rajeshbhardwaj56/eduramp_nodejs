@@ -17,16 +17,57 @@ async function findOwnedProductOrThrow(id, userId) {
 }
 
 export async function listProducts(req, res) {
-    
+  const { page, limit, search, minPrice, maxPrice, sortBy, order } = req.validated.query;
+
+  const where = {};
+  if(search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' }},
+      { description: { contains: search, mode: 'insensitive' }},
+    ]
+  }
+  
+
+  if(minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {};
+    if(minPrice !== undefined) where.price.gte = minPrice
+    if(maxPrice !== undefined) where.price.lte = maxPrice 
+  }
+
+  const [products, total] = await prisma.$transaction([
+    prisma.product.findMany({
+      where,
+      include: ownerSelect,
+      orderBy: { [sortBy]: order},
+      skip: (page - 1) * limit,
+      take: limit
+    }),
+    prisma.product.count({ where })
+  ])
+
+  
+
+  res.json({
+    success: true,
+    data: products,
+    meta: { page, limit, totalPages: Math.ceil(total/limit)}
+  })
+
 }
 
 export async function getProduct(req, res) {
   try {
     const { id } = req.validated.params;
 
-    const product = await prisma.product.findUnique({ where: { id }, include: ownerSelect });
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { owner: { select: { id: true, name: true } } },
+    });
 
-    res.json({ success: true, data: product})
+    console.log(product.ownerId);
+
+    
+    res.json({ success: true, data: product });
   } catch (error) {
     throw ApiError.conflict(error.message);
   }
