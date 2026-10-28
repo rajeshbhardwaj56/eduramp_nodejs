@@ -311,10 +311,7 @@ export const openapiSpec = {
         parameters: [idParam],
         description: "Only the product's owner or an ADMIN can delete it.",
         responses: {
-          200: {
-            description: "Product deleted",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/MessageResponse" } } },
-          },
+          204: { description: "Product deleted (no response body)" },
           400: errorResponse("Invalid id"),
           401: errorResponse("Missing, invalid or expired token"),
           403: errorResponse("Not the owner of this product"),

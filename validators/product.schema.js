@@ -37,6 +37,7 @@ export const listProductSchema = z.object({
         maxPrice: z.coerce.number().min(0).optional(),
         sortBy: z.enum(["createdAt", "price", "name", "stock"]).default("createdAt"),
         order: z.enum(["asc", "desc"]).default("desc"),
+        ownerId: z.coerce.number().int().min(1).default(1),
     })
     .refine((q) => q.minPrice === undefined || q.maxPrice === undefined || q.minPrice <= q.maxPrice, {
         message: "Min price can not be greathere then max price",
